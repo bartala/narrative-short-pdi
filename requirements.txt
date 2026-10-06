@@ -1,0 +1,16 @@
+numpy==1.26.4
+pandas==2.2.3
+scipy==1.15.2
+scikit-learn==1.7.2
+joblib==1.4.2
+matplotlib==3.10.1
+tqdm==4.67.1
+torch==2.5.1
+torch-geometric==2.6.1
+sentence-transformers==4.1.0
+transformers==4.41.2
+langchain-ollama==0.3.2
+langchain-core==0.3.59
+langchain-experimental==0.3.4
+spacy==3.7.5
+scispacy==0.6.2

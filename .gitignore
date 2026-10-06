@@ -1,0 +1,16 @@
+*.csv
+*.tsv
+*.xlsx
+*.pt
+*.npy
+*.npz
+*.jsonl
+*.json
+*.log
+*.tar.gz
+results*/
+narrative_embeddings/
+MARK1/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
