@@ -1,5 +1,5 @@
 """
-Benchmark of the graph neural network, feed-forward network, LR and SVM with nested cross-validation.
+Benchmark of the graph neural network, feed-forward network, LR and SVM with nested cross-validation (optional class-weighted loss for the neural models).
 
 Usage:
     python fair_benchmark.py --graph perignnosis_graph.pt --seeds 1 2 3 4 5 --out results/
@@ -24,6 +24,14 @@ TOTAL = EMB + PDIN + COMP
 PDI6 = [0, 1, 2, 4, 11, 12]
 NN_GRID = {"hidden_channels": [32, 64], "dropout": [0.0, 0.3], "lr": [1e-3, 5e-4]}
 TUNE_EPOCHS, FINAL_EPOCHS, WD = 15, 30, 1e-2
+CLASS_WEIGHTED = False
+
+
+def ce_loss(logits, y):
+    if not CLASS_WEIGHTED:
+        return F.cross_entropy(logits, y)
+    counts = torch.bincount(y, minlength=2).float().clamp(min=1)
+    return F.cross_entropy(logits, y, weight=len(y) / (2 * counts))
 C_GRID = {"clf__C": [0.01, 0.1, 1, 10, 100]}
 
 
@@ -134,7 +142,7 @@ def tune_train_nn(make_model, g, tr, te, y_t, device, woman, seed):
         opt = torch.optim.AdamW(m.parameters(), lr=cfg["lr"], weight_decay=WD)
         for _ in range(TUNE_EPOCHS):
             m.train(); opt.zero_grad()
-            F.cross_entropy(m(g.x_dict, g.edge_index_dict)[sub_tr], y_t[sub_tr]).backward(); opt.step()
+            ce_loss(m(g.x_dict, g.edge_index_dict)[sub_tr], y_t[sub_tr]).backward(); opt.step()
         m.eval()
         with torch.no_grad():
             p = F.softmax(m(g.x_dict, g.edge_index_dict)[sub_val], 1)[:, 1].cpu().numpy()
@@ -148,7 +156,7 @@ def tune_train_nn(make_model, g, tr, te, y_t, device, woman, seed):
     opt = torch.optim.AdamW(m.parameters(), lr=best_cfg["lr"], weight_decay=WD)
     for _ in range(FINAL_EPOCHS):
         m.train(); opt.zero_grad()
-        F.cross_entropy(m(g.x_dict, g.edge_index_dict)[tr], y_t[tr]).backward(); opt.step()
+        ce_loss(m(g.x_dict, g.edge_index_dict)[tr], y_t[tr]).backward(); opt.step()
     m.eval()
     with torch.no_grad():
         return F.softmax(m(g.x_dict, g.edge_index_dict)[te], 1)[:, 1].cpu().numpy()
@@ -251,4 +259,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="results_fair_benchmark")
     ap.add_argument("--legacy-sanitize", action="store_true",
                     help="reproduce the original __Entity__ -> Entity collision")
-    run(ap.parse_args())
+    ap.add_argument("--class-weighted", action="store_true",
+                    help="class-weighted cross-entropy for the FFNN and GNN (training labels only)")
+    args = ap.parse_args()
+    CLASS_WEIGHTED = args.class_weighted
+    run(args)

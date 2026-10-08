@@ -82,7 +82,9 @@ def main(a):
             d, p = perm_test(o["y_true"].values, o[f"{m1}|{k1}"].values,
                              o[f"{m2}|{k2}"].values, n=a.perms, seed=s)
             ds.append(d); ps.append(p)
+        test.ps[(m1, k1, m2, k2)] = ps
         return np.mean(ds), min(ps), max(ps), sum(d > 0 for d in ds)
+    test.ps = {}
 
     print(f"\n=== OOF AUC by number of PDI items (mean over seeds; "
           f"perm tests {a.perms} draws) ===")
@@ -101,10 +103,14 @@ def main(a):
         ok = None
         for k in K_ITEMS:
             d, pmin, _, _ = test(m, k, M_PDI, 13)
-            if d >= 0 or pmin >= 0.05:
+            if pmin >= 0.05:
                 ok = k
                 break
         print(f"  {m:<28} smallest k not significantly worse in any seed: {ok}")
+    print("\nper-repetition p, narrative + top-k vs LR on all 13 items:")
+    for k in K_ITEMS:
+        test(M_NAR, k, M_PDI, 13)
+        print(f"  k={k:<2} " + " ".join(f"{p:.3f}" for p in test.ps[(M_NAR, k, M_PDI, 13)]))
     print("\nThe gap between the 'PDI top-k' and 'narrative + top-k' answers is the")
     print("number of questionnaire items the narrative can stand in for.")
     print(f"\nsaved to {a.out}")
